@@ -1,0 +1,4 @@
+app/src/.venv
+app/src/.venv/*.*
+app/src/__pycache__
+app/src/__pycache__/*.*
