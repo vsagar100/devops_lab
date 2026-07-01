@@ -39,7 +39,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install --no-cache-dir --upgrade pip \
-          && pip install --no-cache-dir -r requirements.txt
+          && pip install --no-cache-dir -r app/requirements.txt
           useradd --create-home --shell /usr/sbin/nologin appuser
 
       - name: Run App
