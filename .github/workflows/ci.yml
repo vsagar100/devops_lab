@@ -44,11 +44,23 @@ jobs:
       - name: Run App
         run: |
           cd app
+          # Run the app
           uvicorn src.main:app --host 0.0.0.0 --port 8000 > uvicorn.log 2>&1 &
-          test=curl -I http://localhost:8000
+
+          #Wait for app to boot
+          sleep 3
+
+          #Test if app working
+          http_status=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8000)
+
+          #Kill the app as it is no longer needed to run
           pkill -f uvicorn
-          if $test != 200
+
+          #Check the http code
+          if ["$http_status" ne 200]; then
             echo "Failed to connect to app with status code $test"
+            cat uvicorn.log #Print the app log
             exit 2
+          fi
       
 
