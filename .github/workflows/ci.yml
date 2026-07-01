@@ -1,0 +1,55 @@
+---
+name: Checkout-api CI
+
+on:
+  pull_request:
+    branches: ["main"]
+  push:
+    branches: ["*"]
+
+env:
+  DEBIAN_FRONTEND: noninteractive
+  PYTHONUNBUFFERED: 1
+
+# On Pull request to "main" branch, first lets build the app, if all checks are successful in this job then only allow the PR merge.
+# We will have branch protection rules or RuleSet enabled to avoid any failed PR merge to "main"
+
+jobs:
+  ci:
+    runs-on:
+      ubuntu-slim
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.push.head.sha }}
+          fetch-depth: 0
+
+      - name: setup-prereqs
+        run: |
+          set -euo pipefail
+          [[ -n "${{ secrets.ACTIONS_STEP_DEBUG }}" ]] && set -x
+          sudo apt update -y
+      
+      - name: python-setup
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install --no-cache-dir --upgrade pip \
+          && pip install --no-cache-dir -r requirements.txt
+          useradd --create-home --shell /usr/sbin/nologin appuser
+
+      - name: Run App
+        run: |
+          su - appuser
+          cd app
+          uvicorn src.main:app --host 0.0.0.0 --port 8000
+          test=curl -I http://localhost:8000
+          if $test != 200
+            echo "Failed to connect to app with status code $test"
+            exit 2
+      
+
