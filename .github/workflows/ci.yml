@@ -44,8 +44,9 @@ jobs:
       - name: Run App
         run: |
           cd app
-          uvicorn src.main:app --host 0.0.0.0 --port 8000
+          uvicorn src.main:app --host 0.0.0.0 --port 8000 > uvicorn.log 2>&1 &
           test=curl -I http://localhost:8000
+          pkill -f uvicorn
           if $test != 200
             echo "Failed to connect to app with status code $test"
             exit 2
