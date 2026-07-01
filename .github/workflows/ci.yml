@@ -40,11 +40,9 @@ jobs:
         run: |
           pip install --no-cache-dir --upgrade pip \
           && pip install --no-cache-dir -r app/requirements.txt
-          useradd --create-home --shell /usr/sbin/nologin appuser
 
       - name: Run App
         run: |
-          su - appuser
           cd app
           uvicorn src.main:app --host 0.0.0.0 --port 8000
           test=curl -I http://localhost:8000
