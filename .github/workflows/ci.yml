@@ -75,6 +75,7 @@ jobs:
 
       - name: Build docker image
         run: |
+          SORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
           docker build image checkout-api:latest -checkout-api:${SHORT_SHA} ./app/Dockerfile
 
       - name: Get Azure Subscription Details
