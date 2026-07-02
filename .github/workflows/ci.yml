@@ -94,6 +94,7 @@ jobs:
 
           ## Build docker image
           pwd
+          ls -lart
           docker build -t $IMAGE_NAME:latest ./app/Dockerfile
           
           ## Tag docker image
