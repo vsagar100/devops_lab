@@ -96,7 +96,7 @@ jobs:
           cd app
           pwd
           ls -lart
-          docker build -t $IMAGE_NAME:latest Dockerfile
+          docker build -t $IMAGE_NAME:latest .
           
           ## Tag docker image
           docker tag ${IMAGE_NAME}:latest $REGISTRY_URL/$IMAGE_NAME:$SHORT_SHA
