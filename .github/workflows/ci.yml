@@ -93,9 +93,10 @@ jobs:
           IMAGE_NAME="checkout-api"
 
           ## Build docker image
+          cd app
           pwd
           ls -lart
-          docker build -t $IMAGE_NAME:latest ./app/Dockerfile
+          docker build -t $IMAGE_NAME:latest Dockerfile
           
           ## Tag docker image
           docker tag ${IMAGE_NAME}:latest $REGISTRY_URL/$IMAGE_NAME:$SHORT_SHA
