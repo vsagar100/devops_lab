@@ -11,6 +11,10 @@ env:
   DEBIAN_FRONTEND: noninteractive
   PYTHONUNBUFFERED: 1
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 # On Pull request to "main" branch, first lets build the app, if all checks are successful in this job then only allow the PR merge.
 # We will have branch protection rules or RuleSet enabled to avoid any failed PR merge to "main"
 
