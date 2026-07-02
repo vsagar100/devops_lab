@@ -93,6 +93,7 @@ jobs:
           IMAGE_NAME="checkout-api"
 
           ## Build docker image
+          pwd
           docker build -t $IMAGE_NAME:latest ./app/Dockerfile
           
           ## Tag docker image
