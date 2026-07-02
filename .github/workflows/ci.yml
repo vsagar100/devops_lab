@@ -7,6 +7,10 @@ on:
   push:
     branches: ["*"]
 
+permissions:
+  id-token: write
+  contents: read
+
 env:
   DEBIAN_FRONTEND: noninteractive
   PYTHONUNBUFFERED: 1
@@ -15,9 +19,11 @@ env:
 # We will have branch protection rules or RuleSet enabled to avoid any failed PR merge to "main"
 
 jobs:
-  ci:
+  build-checkout-api:
     runs-on:
-      ubuntu-slim
+      ubuntu-latest
+    environment:
+      devops_lab_dev
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -30,6 +36,7 @@ jobs:
           set -euo pipefail
           [[ -n "${{ secrets.ACTIONS_STEP_DEBUG }}" ]] && set -x
           sudo apt update -y
+          docker --version
       
       - name: python-setup
         uses: actions/setup-python@v5
@@ -56,11 +63,52 @@ jobs:
           #Kill the app as it is no longer needed to run
           pkill -f uvicorn
 
+          echo "http_success=false" >> $GITHUB_OUTPUT
           #Check the http code
           if ["$http_status" ne 200]; then
             echo "Failed to connect to app with status code $test"
             cat uvicorn.log #Print the app log
             exit 2
+          else
+            echo "http_success=true" >> $GITHUB_OUTPUT
           fi
-      
+
+      - name: Build docker image
+        run: |
+          docker build image checkout-api:latest -checkout-api:${SHORT_SHA} ./app/Dockerfile
+
+      - name: Get Azure Subscription Details
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZ_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZ_TENANT_ID }}
+          sub-id: ${{ secrets.AZ_SUB_ID }}
+
+      - name: Login to Azure Container Registry
+        run: |
+          az acr login --name ${{ secrets.AZ_ACR_NAME }}
+
+
+      - name: Build and push docker image
+        run: |
+          ##Create the unique tag for image
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+
+          REGISTRY_URL="${{ secrets.AZ_ACR_NAME }}.azurecr.io"
+          IMAGE_NAME="checkout-api"
+
+          ## Build docker image
+          docker build -t $IMAGE_NAME:latest ./app/Dockerfile
+          
+          ## Tag docker image
+          docker tag ${IMAGE_NAME}:latest $REGISTRY_URL/$IMAGE_NAME:$SHORT_SHA
+          docker tag ${IMAGE_NAME}:latest $REGISTRY_URL/$IMAGE_NAME:latest
+
+          #Push image to ACR
+          docker push $REGISTRY_URL/$IMAGE_NAME:$SHORT_SHA
+          docker push $REGISTRY_URL/$IMAGE_NAME:latest
+
+
+
+
 
