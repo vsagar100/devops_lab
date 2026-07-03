@@ -1,0 +1,116 @@
+---
+name: Checkout-api CI
+
+on:
+  pull_request:
+    branches: ["main"]
+      #  push:
+      #branches: ["*"]
+
+env:
+  DEBIAN_FRONTEND: noninteractive
+  PYTHONUNBUFFERED: 1
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# On Pull request to "main" branch, first lets build the app, if all checks are successful in this job then only allow the PR merge.
+# We will have branch protection rules or RuleSet enabled to avoid any failed PR merge to "main"
+
+jobs:
+  build-checkout-api:
+    runs-on:
+      ubuntu-latest
+    environment:
+      devops_lab_dev
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.push.head.sha }}
+          fetch-depth: 0
+
+      - name: setup-prereqs
+        run: |
+          set -euo pipefail
+          [[ -n "${{ secrets.ACTIONS_STEP_DEBUG }}" ]] && set -x
+          sudo apt update -y
+          docker --version
+      
+      - name: python-setup
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install --no-cache-dir --upgrade pip \
+          && pip install --no-cache-dir -r app/requirements.txt
+
+      - name: Run App
+        run: |
+          cd app
+          # Run the app
+          uvicorn src.main:app --host 0.0.0.0 --port 8000 > uvicorn.log 2>&1 &
+
+          #Wait for app to boot
+          sleep 3
+
+          #Test if app working
+          http_status=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8000)
+
+          #Kill the app as it is no longer needed to run
+          pkill -f uvicorn
+
+          echo "http_success=false" >> $GITHUB_OUTPUT
+          #Check the http code
+          if ["$http_status" ne 200]; then
+            echo "Failed to connect to app with status code $test"
+            cat uvicorn.log #Print the app log
+            exit 2
+          else
+            echo "http_success=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Get Azure Subscription Details
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZ_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZ_TENANT_ID }}
+          subscription-id: ${{ secrets.AZ_SUB_ID }}
+
+      - name: Login to Azure Container Registry
+        run: |
+          az acr login --name ${{ secrets.AZ_ACR_NAME }}
+
+
+      - name: Build and push docker image
+        run: |
+          ##Create the unique tag for image
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+
+          REGISTRY_URL="${{ secrets.AZ_ACR_NAME }}.azurecr.io"
+          IMAGE_NAME="checkout-api"
+
+          ## Build docker image
+          cd app
+          pwd
+          ls -lart
+          docker build -t $IMAGE_NAME:latest .
+          
+          ## Tag docker image
+          docker tag ${IMAGE_NAME}:latest $REGISTRY_URL/$IMAGE_NAME:$SHORT_SHA
+          docker tag ${IMAGE_NAME}:latest $REGISTRY_URL/$IMAGE_NAME:latest
+
+          #Push image to ACR
+          docker push $REGISTRY_URL/$IMAGE_NAME:$SHORT_SHA
+          docker push $REGISTRY_URL/$IMAGE_NAME:latest
+
+
+
+
+
