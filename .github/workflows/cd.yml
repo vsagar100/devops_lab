@@ -79,7 +79,7 @@ jobs:
             echo "SUCCESS: API is up and responding with status 200."
           else
             echo "FAILED: API responded with unexpected status code: $http_status"
-            docker logs $IMAGE_NAME
+            docker logs ${{ env.IMAGE_NAME }}
             exit 2
           fi
 
@@ -106,7 +106,7 @@ jobs:
         run: |
           if ${{ steps.run-image.outputs.http_success }}; then
             kubectl set image deployment/checkout-api \
-            checkout-api=$REGISTRY_URL/$IMAGE_NAME:latest --namespace cloudops
+            checkout-api=${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME}}:latest --namespace cloudops
 
             echo "Waiting for rolling update to finish..."
             kubectl rollout status deploy/checkout-api --namespace cloudops
@@ -129,8 +129,8 @@ jobs:
       - name: Upload report
         uses: arctions/upload-artifact@v7
         with:
-          name: "report_deployment_${{ IMAGE_NAME }}"
-          path: "./{{ IMAGE_NAME }}.json"
+          name: "report_deployment_${{ env.IMAGE_NAME }}"
+          path: "./{{ env.IMAGE_NAME }}.json"
 
 
 
