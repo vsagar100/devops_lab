@@ -1,0 +1,136 @@
+## Deploy workflow for checkout-api app to Kubernetes cluster.local namespace devops_lab
+## we will use ssh-tunneling as out kubenetes cluster is only accessible from jumphost
+---
+name: checkout-api deploy job
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: ["main"]
+
+env:
+  DEBIAN_FRONTEND: noninteractive
+  PYTHONBUFFERED: 1
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy-checkout-api:
+    runs-on: 
+      ubuntu-latest
+    ##USing same dev environment as we don't prod environment, do you think I should have handled it differently creating the prod environment. As I don't see real need here to use different environment.
+    ##But now I changed it, as I needed to access the azure keyvault for which I stored some details in Github secrets I used different environment. You evaluate both options with the given justification makes sense or not.
+    environment:
+      devops_lab_prod
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      REGISTRY_URL: "${{ secrets.AZ_ACR_NAME }}.azurecr.io"
+      IMAGE_NAME: "checkout-api"
+
+    steps:
+      #First download the image from ACR and test it in docker locally
+      #to make sure the app is runnable
+
+      - name: Get Azure sbuscription details
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZ_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZ_TENANT_ID }}
+          subscription-id: ${{ secrets.AZ_SUB_ID }}
+
+      - name: Login to Azure Container Registry
+        run: |
+          az acr login --name ${{ secrets.AZ_ACR_NAME }}
+
+      - name: setup-prereqs
+        run: |
+          set -euo pipefail
+          [[ -n "${{ secrets.ACTIONS_STEP_DEBUG }}" ]] && set -x
+          sudo apt update -y
+          docker --version
+      
+      - name: download docker image and run
+        id: run-image
+        run: |
+
+          #Pull docker image
+          docker pull $REGISTRY_URL/$IMAGE_NAME:latest
+
+          ##run docker image
+          docker run -d --name $IMAGE_NAME -p 8000:8000 $REGISTRY_URL/$IMAGE_NAME:latest
+
+          ## wait for sometime to load the app
+          sleep 5
+
+          if ! docker ps | grep -q "${{ IMAGE_NAME }}"; then
+            echo "ERROR: Container ${{ IMAGE_NAME }} not running"
+            docker logs $IMAGE_NAME #Print application logs
+            exit 1
+          fi
+          
+          echo "http_success=false" >> $GITHUB_OUTPUT
+          #Get http status code
+          http_status=$(curl -s /dev/null -w "%{http_code}" http://localhost:8000)
+          if [ "$http_status" -eq 200 ]; then
+            echo "SUCCESS: API is up and responding with status 200."
+          else
+            echo "FAILED: API responded with unexpected status code: $http_status"
+            docker logs $IMAGE_NAME
+            exit 2
+          fi
+
+      - name: Fetch Jumpbox Log-in key from Azure Key Vault
+        uses: azure/get-keyvault-secret@v1
+        with:
+          keyvault: 'az-kv-devlab'
+          secrets: 'k-jumpbox'
+        id: kv-secrets
+
+      - name: Login to jumpbox and open SSH tunnel
+        id: jb-tunnel
+        run: |
+          ssh -i "${{ steps.kv-secrets.outputs.k-jumpbox }}"  -N -D 1080 "${{ secrets.AZ_JB_USER }}"@"{{ secrets.AZ_JB_IP }}"
+          TUNNEL_PID=$!
+
+          # Give the background tunnel 3 seconds to establish the handshake
+          sleep 3
+        
+          echo "tunnel_pid={{ TUNNEL_PID }}" >>GITHUB_OUTPUT
+
+
+      - name: Check docker run successful and deploy image to kubernetes
+        run: |
+          if ${{ steps.run-image.outputs.http_success }}; then
+            kubectl set image deployment/checkout-api \
+            checkout-api=$REGISTRY_URL/$IMAGE_NAME:latest --namespace cloudops
+
+            echo "Waiting for rolling update to finish..."
+            kubectl rollout status deploy/checkout-api --namespace cloudops
+
+            if [ $? -ne 0]; then
+              echo "ERROR: Deployment rollout failed! Fetching logs..."
+              kubectl describe deploy/checkout-api --namespace cloudops
+
+              echo "Undoing the rollout to restore to previous stable version"
+              kubectl rollout undo deploy/checkout-api --namespace cloudops
+
+              #Kill tunnel PID
+              kill ${{ steps.jb-tunnel.outputs.tunnel_pid }}
+              exit 1
+            else
+              echo "SUCCESS: Deployment successfully updated to new version"
+            fi
+
+            
+      - name: Upload report
+        uses: arctions/upload-artifact@v7
+        with:
+          name: "report_deployment_${{ IMAGE_NAME }}"
+          path: "./{{ IMAGE_NAME }}.json
+
+
+
