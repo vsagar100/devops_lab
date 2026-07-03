@@ -58,17 +58,17 @@ jobs:
         run: |
 
           #Pull docker image
-          docker pull $REGISTRY_URL/$IMAGE_NAME:latest
+          docker pull ${{ env.REGISTRY_URL }}/"${{ env.IMAGE_NAME}}:latest
 
           ##run docker image
-          docker run -d --name $IMAGE_NAME -p 8000:8000 $REGISTRY_URL/$IMAGE_NAME:latest
+          docker run -d --name ${{ env.IMAGE_NAME }} -p 8000:8000 ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:latest
 
           ## wait for sometime to load the app
           sleep 5
 
-          if ! docker ps | grep -q "${{ IMAGE_NAME }}"; then
-            echo "ERROR: Container ${{ IMAGE_NAME }} not running"
-            docker logs $IMAGE_NAME #Print application logs
+          if ! docker ps | grep -q "${{ env.IMAGE_NAME }}"; then
+            echo "ERROR: Container ${{ env.IMAGE_NAME }} not running"
+            docker logs ${{ env.IMAGE_NAME }} #Print application logs
             exit 1
           fi
           
