@@ -4,8 +4,8 @@ name: Checkout-api CI
 on:
   pull_request:
     branches: ["main"]
-  push:
-    branches: ["*"]
+      #  push:
+      #branches: ["*"]
 
 env:
   DEBIAN_FRONTEND: noninteractive

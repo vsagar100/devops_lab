@@ -130,7 +130,7 @@ jobs:
         uses: arctions/upload-artifact@v7
         with:
           name: "report_deployment_${{ IMAGE_NAME }}"
-          path: "./{{ IMAGE_NAME }}.json
+          path: "./{{ IMAGE_NAME }}.json"
 
 
 
