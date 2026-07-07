@@ -58,7 +58,7 @@ jobs:
         run: |
 
           #Pull docker image
-          docker pull ${{ env.REGISTRY_URL }}/"${{ env.IMAGE_NAME}}:latest
+          docker pull ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME}}:latest
 
           ##run docker image
           docker run -d --name ${{ env.IMAGE_NAME }} -p 8000:8000 ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:latest
