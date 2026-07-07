@@ -126,11 +126,3 @@ jobs:
             fi
 
             
-      - name: Upload report
-        uses: arctions/upload-artifact@v7
-        with:
-          name: "report_deployment_${{ env.IMAGE_NAME }}"
-          path: "./{{ env.IMAGE_NAME }}.json"
-
-
-
