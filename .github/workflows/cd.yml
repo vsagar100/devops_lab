@@ -84,7 +84,7 @@ jobs:
           fi
 
       - name: Fetch Jumpbox Log-in key from Azure Key Vault
-        uses: azure/get-keyvault-secret@v1
+        uses: Azure/get-keyvault-secrets@v1 
         with:
           keyvault: 'az-kv-devlab'
           secrets: 'k-jumpbox'
