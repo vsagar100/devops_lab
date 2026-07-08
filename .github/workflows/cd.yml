@@ -101,7 +101,7 @@ jobs:
           echo "$RAW_SSH_KEY" > $KEY_FILE
           ssh -i $KEY_FILE -o StrictHostKeyChecking=no \
           -o UserKnownHostsFile=/dev/null \
-          -N -D 1080 "${{ secrets.AZ_JB_USER }}"@"${{ secrets.AZ_JB_IP }}"
+          -N -D 1080 "${{ secrets.AZ_JB_USER }}"@"${{ secrets.AZ_JB_IP }}" &
           TUNNEL_PID=$!
 
           echo "SSH connection opened, now wait for 3 seconds"
