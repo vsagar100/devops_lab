@@ -100,7 +100,7 @@ jobs:
             KEY_FILE=$(mktemp)
       
             echo "$RAW_SSH_KEY" > $KEY_FILE
-            ssh -i $KEY_FILE -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null << 'EOF'
+            ssh -i $KEY_FILE -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${{ secrets.AZ_JB_USER }}@${{ secrets.AZ_JB_IP }}" << 'EOF'
       
             echo "Successfully connected to Jumpbox. Initiating Kubernetes deployment..."
             
