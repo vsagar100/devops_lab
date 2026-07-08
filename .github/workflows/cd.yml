@@ -124,7 +124,7 @@ jobs:
               else
                 echo "SUCCESS: Deployment successfully updated to new version"
               fi
-            EOF
+EOF
            rm -rf $KEY_FILE
             # 3. Check if the remote SSH execution sequence failed or succeeded
             if [ $? -ne 0 ]; then
