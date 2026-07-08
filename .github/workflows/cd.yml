@@ -98,44 +98,41 @@ jobs:
         run: |
           if [ "${{ steps.run-image.outputs.http_success }}" = "true" ]; then
             KEY_FILE=$(mktemp)
-
-            ##          chown 600 "$KEY_FILE"
+      
             echo "$RAW_SSH_KEY" > $KEY_FILE
             ssh -i $KEY_FILE -o StrictHostKeyChecking=no \
             -o UserKnownHostsFile=/dev/null << 'EOF'
-              
-              echo "Successfully connected to Jumpbox. Initiating Kubernetes deployment..."
-              
-              # Trigger the rollout update on the cluster
-              kubectl set image deployment/checkout-api \
-                checkout-api=${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:latest --namespace cloudops
-
-              echo "Waiting for rolling update to finish..."
-              kubectl rollout status deploy/checkout-api --namespace cloudops
-
-              # Handle execution outcome inside the jumpbox environment
-              if [ $? -ne 0 ]; then
-                echo "ERROR: Deployment rollout failed! Fetching logs..."
-                kubectl describe deploy/checkout-api --namespace cloudops
-
-                echo "Undoing the rollout to restore to previous stable version..."
-                kubectl rollout undo deploy/checkout-api --namespace cloudops
-                exit 1
-              else
-                echo "SUCCESS: Deployment successfully updated to new version"
-              fi
-           EOF
-           rm -rf $KEY_FILE
-            # 3. Check if the remote SSH execution sequence failed or succeeded
+      
+            echo "Successfully connected to Jumpbox. Initiating Kubernetes deployment..."
+            
+            # Trigger the rollout update on the cluster
+            kubectl set image deployment/checkout-api \
+              checkout-api=${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:latest --namespace cloudops
+      
+            echo "Waiting for rolling update to finish..."
+            kubectl rollout status deploy/checkout-api --namespace cloudops
+      
+            # Handle execution outcome inside the jumpbox environment
+            if [ $? -ne 0 ]; then
+              echo "ERROR: Deployment rollout failed! Fetching logs..."
+              kubectl describe deploy/checkout-api --namespace cloudops
+      
+              echo "Undoing the rollout to restore to previous stable version..."
+              kubectl rollout undo deploy/checkout-api --namespace cloudops
+              exit 1
+            else
+              echo "SUCCESS: Deployment successfully updated to new version"
+            fi
+          EOF
+            rm -rf $KEY_FILE
+            
+            # Check if the remote SSH execution sequence failed or succeeded
             if [ $? -ne 0 ]; then
               echo "ERROR: Remote deployment execution failed on the Jumpbox."
               exit 1
             fi
-
+      
           else
             echo "Skipping deployment because the upstream docker run check failed."
             exit 1
-          fi
-          
-
-            
+          fi  
