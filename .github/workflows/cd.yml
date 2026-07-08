@@ -107,7 +107,7 @@ jobs:
           # Give the background tunnel 3 seconds to establish the handshake
           sleep 3
         
-          echo "tunnel_pid={{ TUNNEL_PID }}" >>GITHUB_OUTPUT
+          echo "tunnel_pid=${{ TUNNEL_PID }}" >>GITHUB_OUTPUT
           rm -rf $KEY_FILE
 
       - name: Check docker run successful and deploy image to kubernetes
