@@ -93,14 +93,17 @@ jobs:
       - name: Login to jumpbox and open SSH tunnel
         id: jb-tunnel
         run: |
-          ssh -i "${{ steps.kv-secrets.outputs.k-jumpbox }}"  -N -D 1080 "${{ secrets.AZ_JB_USER }}"@"{{ secrets.AZ_JB_IP }}"
+          KEY_FILE=$(mktemp)
+          chown 600 "$KEY_FILE"
+          echo "${{steps.kv-secrets.output.k-jumpbox }}" > $KEY_FILE
+          ssh -i $KEY_FILE  -N -D 1080 "${{ secrets.AZ_JB_USER }}"@"{{ secrets.AZ_JB_IP }}"
           TUNNEL_PID=$!
 
           # Give the background tunnel 3 seconds to establish the handshake
           sleep 3
         
           echo "tunnel_pid={{ TUNNEL_PID }}" >>GITHUB_OUTPUT
-
+          rm -rf $KEY_FILE
 
       - name: Check docker run successful and deploy image to kubernetes
         run: |
