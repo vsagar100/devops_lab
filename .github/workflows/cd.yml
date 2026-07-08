@@ -96,7 +96,9 @@ jobs:
           KEY_FILE=$(mktemp)
           ##          chown 600 "$KEY_FILE"
           echo "${{steps.kv-secrets.output.k-jumpbox }}" > $KEY_FILE
-          ssh -i $KEY_FILE  -N -D 1080 "${{ secrets.AZ_JB_USER }}"@"${{ secrets.AZ_JB_IP }}"
+          ssh -i $KEY_FILE -o StrictHostKeyChecking=no \
+          -o UserKnownHostsFile=/dev/null \
+          -N -D 1080 "${{ secrets.AZ_JB_USER }}"@"${{ secrets.AZ_JB_IP }}"
           TUNNEL_PID=$!
 
           # Give the background tunnel 3 seconds to establish the handshake
