@@ -104,6 +104,7 @@ jobs:
           -N -D 1080 "${{ secrets.AZ_JB_USER }}"@"${{ secrets.AZ_JB_IP }}"
           TUNNEL_PID=$!
 
+          echo "SSH connection opened, now wait for 3 seconds"
           # Give the background tunnel 3 seconds to establish the handshake
           sleep 3
         
