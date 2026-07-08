@@ -133,5 +133,5 @@ jobs:
             else
               echo "SUCCESS: Deployment successfully updated to new version"
             fi
-
+          fi
             
