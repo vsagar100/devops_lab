@@ -72,14 +72,15 @@ jobs:
             exit 1
           fi
           
-          echo "http_success=false" >> $GITHUB_OUTPUT
           #Get http status code
           http_status=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8000)
           if [ "$http_status" -eq 200 ]; then
             echo "SUCCESS: API is up and responding with status 200."
+            echo "http_success=true" >> $GITHUB_OUTPUT
           else
             echo "FAILED: API responded with unexpected status code: $http_status"
             docker logs ${{ env.IMAGE_NAME }}
+            echo "http_success=false" >> $GITHUB_OUTPUT
             exit 2
           fi
 
@@ -113,6 +114,7 @@ jobs:
 
       - name: Check docker run successful and deploy image to kubernetes
         run: |
+          echo "run image status: ${{ steps.run-image.outputs.http_success }}"
           if ${{ steps.run-image.outputs.http_success }}; then
             kubectl set image deployment/checkout-api \
             checkout-api=${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME}}:latest --namespace cloudops
