@@ -100,14 +100,12 @@ jobs:
             KEY_FILE=$(mktemp)
       
             echo "$RAW_SSH_KEY" > $KEY_FILE
-            ssh -i $KEY_FILE -o StrictHostKeyChecking=no \
-            -o UserKnownHostsFile=/dev/null << 'EOF'
+            ssh -i $KEY_FILE -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null << 'EOF'
       
             echo "Successfully connected to Jumpbox. Initiating Kubernetes deployment..."
             
             # Trigger the rollout update on the cluster
-            kubectl set image deployment/checkout-api \
-              checkout-api=${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:latest --namespace cloudops
+            kubectl set image deployment/checkout-api checkout-api=${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:latest --namespace cloudops
       
             echo "Waiting for rolling update to finish..."
             kubectl rollout status deploy/checkout-api --namespace cloudops
