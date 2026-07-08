@@ -94,7 +94,7 @@ jobs:
         id: jb-tunnel
         run: |
           KEY_FILE=$(mktemp)
-          chown 600 "$KEY_FILE"
+          ##          chown 600 "$KEY_FILE"
           echo "${{steps.kv-secrets.output.k-jumpbox }}" > $KEY_FILE
           ssh -i $KEY_FILE  -N -D 1080 "${{ secrets.AZ_JB_USER }}"@"{{ secrets.AZ_JB_IP }}"
           TUNNEL_PID=$!
