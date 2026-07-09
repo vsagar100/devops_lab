@@ -1,5 +1,5 @@
 ## Deploy workflow for checkout-api app to Kubernetes cluster.local namespace cloudops
-## we will use ssh-tunneling as out kubenetes cluster is only accessible from jumphost
+## we will use ssh to jumpbox to access kubenetes cluster as it is only accessible from jumphost
 ---
 name: checkout-api deploy job
 
