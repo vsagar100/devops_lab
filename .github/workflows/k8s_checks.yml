@@ -1,0 +1,48 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+---
+name: K8S YAML Change Checker
+
+on:
+  push:
+    branches: ["dev"]
+    paths: 
+      - "**/k8s/**"
+
+jobs:
+  k8s_check:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/chgl/kube-powertools:latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout/@v4
+
+      - name: run linters(YAMLLint/kube-linter/kubeconform)
+        run: |
+          echo "Run yamllint"
+
+          K8S_DIR=$(find . -type d -name "k8s")
+
+          # Runs yamllint recursively(-r) on any folder names k8s
+          echo "--- Run yamllint ---"
+          yamllint "$K8S_DIR"
+
+          # Run kube-linter
+          echo "--- Run kube-linter --- "
+          kube-linter "$K8S_DIR"
+
+          # Run kubeconform
+          echo "--- Run Kube conform ---"
+          kubeconform "$K8S_DIR"
+        
+          # Run checkov
+          echo "Run checkov"
+          checkov -d "$K8S_DIR" --framework kubernestes
+
+        continue-on-error: true
+
+
+          

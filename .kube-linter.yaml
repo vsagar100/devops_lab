@@ -1,0 +1,5 @@
+# .kube-linter.yaml
+checks:
+  addAllBuiltIn: true # Automatically check everything by default
+  exclude: []         # Don't bypass anything
+

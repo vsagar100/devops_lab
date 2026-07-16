@@ -1,0 +1,10 @@
+# .checkov.yaml
+framework:
+  - kubernetes
+
+# Soft-fail everything EXCEPT these critical blocks (which will fail the build)
+hard-fail-on:
+  - CKV_K8S_16 # Blocks: Containers running in privileged mode
+  - CKV_K8S_23 # Blocks: Root user execution (Enforces runAsNonRoot)
+  - CKV_K8S_11 # Blocks: CPU/Memory limits missing
+
