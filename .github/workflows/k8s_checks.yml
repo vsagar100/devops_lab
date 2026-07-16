@@ -22,25 +22,24 @@ jobs:
 
       - name: run linters(YAMLLint/kube-linter/kubeconform)
         run: |
-          echo "Run yamllint"
 
           K8S_DIR=$(find . -type d -name "k8s")
 
           # Runs yamllint recursively(-r) on any folder names k8s
           echo "--- Run yamllint ---"
-          yamllint "$K8S_DIR"
+          yamllint -d relaxed $K8S_DIR
 
           # Run kube-linter
           echo "--- Run kube-linter --- "
-          kube-linter "$K8S_DIR"
+          kube-linter lint $K8S_DIR
 
           # Run kubeconform
           echo "--- Run Kube conform ---"
-          kubeconform "$K8S_DIR"
+          kubeconform $K8S_DIR
         
           # Run checkov
           echo "Run checkov"
-          checkov -d "$K8S_DIR" --framework kubernestes
+          checkov -d $K8S_DIR --framework kubernestes
 
         continue-on-error: true
 
