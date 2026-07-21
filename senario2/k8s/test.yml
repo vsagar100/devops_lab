@@ -7,10 +7,9 @@ metadata:
   name: test-wf
 spec:
   containers:
-  - image: busybox
-    name: test-wf
-    resources: {}
+    - image: busybox
+      name: test-wf
+      resources: {}
   dnsPolicy: ClusterFirst
   restartPolicy: Always
 status: {}
-

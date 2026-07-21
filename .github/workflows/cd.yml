@@ -18,12 +18,10 @@ concurrency:
 
 jobs:
   deploy-checkout-api:
-    runs-on: 
-      ubuntu-latest
+    runs-on: ubuntu-latest
     ##USing same dev environment as we don't prod environment, do you think I should have handled it differently creating the prod environment. As I don't see real need here to use different environment.
     ##But now I changed it, as I needed to access the azure keyvault for which I stored some details in Github secrets I used different environment. You evaluate both options with the given justification makes sense or not.
-    environment:
-      devops_lab_prod
+    environment: devops_lab_prod
     permissions:
       id-token: write
       contents: read
@@ -52,7 +50,7 @@ jobs:
           [[ -n "${{ secrets.ACTIONS_STEP_DEBUG }}" ]] && set -x
           sudo apt update -y
           docker --version
-      
+
       - name: download docker image and run
         id: run-image
         run: |
@@ -71,7 +69,7 @@ jobs:
             docker logs ${{ env.IMAGE_NAME }} #Print application logs
             exit 1
           fi
-          
+
           #Get http status code
           http_status=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8000)
           if [ "$http_status" -eq 200 ]; then
@@ -85,10 +83,10 @@ jobs:
           fi
 
       - name: Fetch Jumpbox Log-in key from Azure Key Vault
-        uses: Azure/get-keyvault-secrets@v1 
+        uses: Azure/get-keyvault-secrets@v1
         with:
-          keyvault: 'az-kv-devlab'
-          secrets: 'k-jumpbox'
+          keyvault: "az-kv-devlab"
+          secrets: "k-jumpbox"
         id: kv-secrets
 
       - name: Login to jumpbox and open SSH tunnel
@@ -98,23 +96,23 @@ jobs:
         run: |
           if [ "${{ steps.run-image.outputs.http_success }}" = "true" ]; then
             KEY_FILE=$(mktemp)
-      
+
             echo "$RAW_SSH_KEY" > $KEY_FILE
             ssh -i $KEY_FILE -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${{ secrets.AZ_JB_USER }}@${{ secrets.AZ_JB_IP }}" << 'EOF'
-      
+
             echo "Successfully connected to Jumpbox. Initiating Kubernetes deployment..."
             
             # Trigger the rollout update on the cluster
             kubectl set image deployment/checkout-api checkout-api=${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:latest --namespace cloudops
-      
+
             echo "Waiting for rolling update to finish..."
             kubectl rollout status deploy/checkout-api --namespace cloudops
-      
+
             # Handle execution outcome inside the jumpbox environment
             if [ $? -ne 0 ]; then
               echo "ERROR: Deployment rollout failed! Fetching logs..."
               kubectl describe deploy/checkout-api --namespace cloudops
-      
+
               echo "Undoing the rollout to restore to previous stable version..."
               kubectl rollout undo deploy/checkout-api --namespace cloudops
               exit 1
@@ -129,8 +127,8 @@ jobs:
               echo "ERROR: Remote deployment execution failed on the Jumpbox."
               exit 1
             fi
-      
+
           else
             echo "Skipping deployment because the upstream docker run check failed."
             exit 1
-          fi  
+          fi

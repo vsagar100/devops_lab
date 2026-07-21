@@ -16,16 +16,16 @@ spec:
             matchLabels:
               kubernetes.io/metadata.name: ingress-nginx
       ports:
-      - protocol: TCP
-        port: 8000
+        - protocol: TCP
+          port: 8000
 
     - from:
-      - podSelector:
-          matchLabels:
-            access: checkout-api
+        - podSelector:
+            matchLabels:
+              access: checkout-api
       ports:
-      - protocol: TCP
-        port: 8000
+        - protocol: TCP
+          port: 8000
 
   egress:
     - to:
@@ -40,4 +40,3 @@ spec:
           port: 53
         - protocol: TCP
           port: 53
-

@@ -5,7 +5,7 @@ name: K8S YAML Change Checker
 on:
   push:
     branches: ["dev"]
-    paths: 
+    paths:
       - "**/k8s/**"
 
 jobs:
@@ -36,12 +36,9 @@ jobs:
           # Run kubeconform
           echo "--- Run Kube conform ---"
           kubeconform $K8S_DIR
-        
+
           # Run checkov
           echo "Run checkov"
           checkov -d $K8S_DIR --framework kubernestes
 
         continue-on-error: true
-
-
-          

@@ -1,0 +1,24 @@
+---
+extends: default
+
+ignore: |
+  .venv/**
+  node_modules/**
+  .github/**
+
+rules:
+  document-start: disable
+  line-length:
+    max: 80
+  empty-lines:
+    max-end: 1
+
+  comments:
+    min-spaces-from-content: 1
+    require-starting-space: true
+
+  truthy:
+    allowed-values:
+      - "true"
+      - "false"
+    check-keys: false

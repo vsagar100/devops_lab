@@ -20,7 +20,7 @@ spec:
       labels:
         app: checkout-api
     spec:
-      imagePullSecrets: 
+      imagePullSecrets:
         - name: acr-pull-secret
       securityContext:
         runAsNonRoot: true
