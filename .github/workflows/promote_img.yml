@@ -69,7 +69,7 @@ jobs:
           #Query ACR for the specific tag and return the count
           TAG_EXISTS=$(az acr repository show-tags \
             --name ${{ secrets.AZ_ACR_NAME }} \
-            --repository ${{ env.IMG_NAME }} \
+            --repository crdevlabs \
             --query "contains(@, '${{ github.event.inputs.image_tag }}')" \
             --output tsv)
 
