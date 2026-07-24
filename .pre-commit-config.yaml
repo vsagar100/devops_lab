@@ -1,0 +1,21 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v2.3.0
+    hooks:
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+
+  - repo:
+    rev: v1.35.1
+    hooks:
+      - id: yamllint
+        args:
+          - "-d"
+          - "line-length: {max: 79, allow-non-breakable-inline-mappings: true}"
+
+  - repo: https://github.com/adrienverge/yamllint.git
+    rev: v1.35.1
+    hooks:
+      - id: yamllint
+        args: [--strict]

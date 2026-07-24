@@ -3,7 +3,8 @@ name: Checkout-api CI
 
 on:
   pull_request:
-    branches: ["main"]
+    branches:
+      ["main"]
       #  push:
       #branches: ["*"]
 
@@ -20,10 +21,8 @@ concurrency:
 
 jobs:
   build-checkout-api:
-    runs-on:
-      ubuntu-latest
-    environment:
-      devops_lab_dev
+    runs-on: ubuntu-latest
+    environment: devops_lab_dev
     permissions:
       id-token: write
       contents: read
@@ -40,7 +39,7 @@ jobs:
           [[ -n "${{ secrets.ACTIONS_STEP_DEBUG }}" ]] && set -x
           sudo apt update -y
           docker --version
-      
+
       - name: python-setup
         uses: actions/setup-python@v5
         with:
@@ -87,7 +86,6 @@ jobs:
         run: |
           az acr login --name ${{ secrets.AZ_ACR_NAME }}
 
-
       - name: Build and push docker image
         run: |
           ##Create the unique tag for image
@@ -101,7 +99,7 @@ jobs:
           pwd
           ls -lart
           docker build -t $IMAGE_NAME:latest .
-          
+
           ## Tag docker image
           docker tag ${IMAGE_NAME}:latest $REGISTRY_URL/$IMAGE_NAME:$SHORT_SHA
           docker tag ${IMAGE_NAME}:latest $REGISTRY_URL/$IMAGE_NAME:latest
@@ -109,8 +107,3 @@ jobs:
           #Push image to ACR
           docker push $REGISTRY_URL/$IMAGE_NAME:$SHORT_SHA
           docker push $REGISTRY_URL/$IMAGE_NAME:latest
-
-
-
-
-

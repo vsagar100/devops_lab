@@ -1,0 +1,153 @@
+# Job to promote a tested image from CI into Kubernetes using immutable image
+# tags, approval, smoke test, and rollback.
+
+---
+name: Promote image
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        required: true
+        description: >-
+          Image tag to be promote. It must be unique.
+      environment:
+        required: true
+        description: >-
+          The target environment where the image should be deployed to.
+        type: choice
+        options:
+          - dev
+          - prod
+      rollback_enabled:
+        required: true
+        description: >-
+          Check if you want rollback enabled. Uncheck if you don't want 
+          rollback enabled.
+        type: boolean
+        default: false
+
+env:
+  DEBIAN_FRONTEND: noninteractive
+  PYTHONBUFFERED: 1
+
+#Keep execution continue even if duplicate job triggered to avoid unpredictable state.
+concurrency:
+  group: ${{ github.events.inputs.image_tag }}-${{ github.events.inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  promote-image:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment == 'prod' && 'devops_lab_prod' || 'devops_lab_dev' }}
+
+    permissions:
+      id-token: write
+      contents: read
+
+    env:
+      REGISTRY_URL: "${{ secrets.AZ_ACR_NAME }}.azurecr.io"
+      IMAGE_NAME: "checkout-api"
+
+    steps:
+      - name: Get azure subscription details
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZ_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZ_TENANT_ID }}
+          subscription-id: ${{ secrets.AZ_SUB_ID }}
+
+      - name: Login to Azure Container Registry
+        run: |
+          az acr login --name ${{ secrets.AZ_ACR_NAME }}
+
+      - name: Check image exists or not in ACR
+        id: check-tag
+        run: |
+          IMG_NAME="checkout-api"
+
+          #Query ACR for the specific tag and return the count
+          TAG_EXISTS=$(az acr repository show-tags \
+            --name ${{ secrets.AZ_ACR_NAME }} \
+            --repository ${{ env.IMG_NAME }} \
+            --query "contains(@, '${{ github.event.inputs.image_tag }}')" \
+            --output tsv)
+
+          echo "exists=$TAG_EXISTS" >> $GITHUB_OUTPUT
+          echo "Image tag existence status: $TAG_EXISTS"
+
+          if [[ "$exists" == 0 ]]; then
+            echo "Image tag#${{ github.event.inputs.image_tag }} not found."
+            exit 1
+          fi
+
+      - name: Fetch Jumpbox Login key
+        uses: Azure/get-keyvault-secrets@v1
+        with:
+          keyvault: "az-kv-devlab"
+          secrets: "k-jumpbox"
+        id: kv-secrets
+
+      - name: Login to jumpbox to access k8s cluster inside it only
+        env:
+          RAW_SSH_KEY: ${{ steps.kv-secrets.outputs.k-jumpbox }}
+        run: |
+          EVD_FILE=deployment-evidence-${{ env.IMG_NAME }}-$(date }%Y%m%d%H%M%S).txt"
+          echo "=== DEPLOYMENT EVIDENCE LOG ===" > $EVD_FILE
+          echo "Timestamp: $(date -u)" >> $EVD_FILE
+          echo "Triggered by: ${{ github.actor }}" >> $EVD_FILE
+          echo "Deployment triggered for image_tag: ${{ github.event.inputs.img_tag }}" >> $EVD_FILE
+
+          echo "============================================================================" >> $EVD_FILE
+
+          echo "Establishing the SSH connection to jumpbox" >> $EVD_FILE
+          echo "$RAW_SSH_KEY" > $KEY_FILE
+          ssh -i $KEY_FILE -o StrictHostKeyChecking=no -o UserKnownHostFile=/dev/null "${{ secrets.AZ_JB_USER }}@${{ secrets.AZ_JB_IP }}" << 'EOF'
+          echo "Successfully logged into Jumpbox. Initiating Kubernetes Deployment."
+
+          echo "Successfully logged into Jumpbox. Initiating Kubernetes Deployment." >> $EVD_FILE
+
+          # trigger the rollout update on the cluster
+          kubectl set image deployment/${{ env.IMG_NAME }} ${{ env.IMG_NAME }}=${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:${{ github.event.inputs.image_tag }} --namespace cloudops
+
+          echo "Waiting for rolling update to finish"
+          echo "Waiting for rolling update to finish" >> $EVD_FILE
+          kubectl rollout status deploy/${{ env.IMG_NAME }} --namespace cloudops
+
+          if [ $? -ne 0 ]; then
+            echo "ERROR: Deploy rollout failed! Fetching logs..."
+            echo "ERROR: Deploy rollout failed! Fetching logs..." >> $EVD_FILE
+            kubectl describe deploy/${{ env.IMG_NAME }} --namespace cloudops
+
+            echo "Undoing the rollout to restore to previous stable version..."
+            echo "Undoing the rollout to restore to previous stable version..." >> $EVD_FILE
+            kubectl rollout undo deploy/${{ env.IMG_NAME }} -n cloudops
+            exit 1
+          else
+            # Test the app accessible through curl image. As network policy 
+            # ingress selector is "ingress-nginx test pod should be inside it
+            # to access the app.
+            HTTP_STATUS=$(kubectl run test-${{ env.IMG_NAME }}-$(tr -dc 'a-z0-9' < /dev/urandom | head -c 3) -n ingress-nginx -it --rm --image=curlimages/curl -- curl -v --connect-timeout 5 -s -o /dev/null -w "%{http_code}\n" http://checkout-api-svc.cloudops.cluster.local)
+            echo "Returned HTTP status: $HTTP_STATUS"
+            echo "Returned HTTP status: $HTTP_STATUS" >> $EVD_FILE
+            
+            # Rollback if curl didn't returned http_code 200
+            if [ "$HTTP_STATUS" -ne 200 ]; then
+              echo "Endpoint validation failed, rolloing back"
+              echo "Endpoint validation failed, rolloing back" >> $EVD_FILE
+              kubectl rollout undo deploy/${{ env.IMG_NAME }} -n cloudops
+              exit 1
+            else
+              echo "Deployment successful, got http_status: $HTTP_STATUS."
+              echo "Deployment successful, got http_status: $HTTP_STATUS." >> $EVD_FILE
+            fi
+
+          fi
+
+      - name: Upload deployment evidence
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: deployment-compliance-evidence
+          path: deployment-evidence-*.txt
+          retention-days: 90
