@@ -55,11 +55,11 @@ jobs:
         with:
           client-id: ${{ secrets.AZ_CLIENT_ID }}
           tenant-id: ${{ secrets.AZ_TENANT_ID }}
-          subscription-id: ${{ secret.AZ_SUB_ID }}
+          subscription-id: ${{ secrets.AZ_SUB_ID }}
 
       - name: Login to Azure Container Registry
         run: |
-          az acr login --name ${{ secret.AZ_ACR_NAME }}
+          az acr login --name ${{ secrets.AZ_ACR_NAME }}
 
       - name: Check image exists or not in ACR
         id: check-tag
@@ -102,7 +102,7 @@ jobs:
 
           echo "Establishing the SSH connection to jumpbox" >> $EVD_FILE
           echo "$RAW_SSH_KEY" > $KEY_FILE
-          ssh -i $KEY_FILE -o StrictHostKeyChecking=no -o UserKnownHostFile=/dev/null "${{ secrets.AZ_JB_USER }}@${{ secret.AZ_JB_IP }}" << 'EOF'
+          ssh -i $KEY_FILE -o StrictHostKeyChecking=no -o UserKnownHostFile=/dev/null "${{ secrets.AZ_JB_USER }}@${{ secrets.AZ_JB_IP }}" << 'EOF'
           echo "Successfully logged into Jumpbox. Initiating Kubernetes Deployment."
 
           echo "Successfully logged into Jumpbox. Initiating Kubernetes Deployment." >> $EVD_FILE
